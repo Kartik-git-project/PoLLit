@@ -12,13 +12,13 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true,
         lowercase: true,
-        trim: ture
+        trim: true
     },
     username : {
         type : String, 
         required: true,
-        unique: ture,
-        trim: ture
+        unique: true,
+        trim: true
     },
     password: {
         type : String, 
@@ -49,14 +49,13 @@ const userSchema = new mongoose.Schema({
     otp : String,
     otpExpires : Date
 },{
-    timestamps: true
+    timestamps: true 
 });
 
 // to hash passowrd before saving it
-userSchema.pre("save", async function (next){
-    if(!this.isModified("password")) return next();
+userSchema.pre("save", async function (){
+    if(!this.isModified("password")) return ;
     this.password = await bcrypt.hash(this.password, 10);
-    next();
 })
 
 // to compare the user password with the save password
