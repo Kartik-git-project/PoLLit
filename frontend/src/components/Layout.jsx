@@ -17,7 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import useClickOutside from "../hooks/useClickOutside"; 
 import NotificationBell from "./NotificationBell";
 import { Avatar } from "./UIElements";
-import Sidebar from "./Sidebar"; // 💡 Right sidebar import
+import Sidebar from "./Sidebar"; 
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", Icon: LayoutGrid },
@@ -38,6 +38,11 @@ const Layout = () => {
   const userRef = useRef(null);
 
   useClickOutside(userRef, () => setUserOpen(false), userOpen);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div className={s.container}>
@@ -78,6 +83,15 @@ const Layout = () => {
 
             {/* Notifications */}
             <NotificationBell />
+
+            {/* Mobile Header Quick Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="md:hidden p-2 text-red-500 hover:bg-red-500/10 rounded-lg flex items-center justify-center"
+              title="Logout"
+            >
+              <LogOut size={18} />
+            </button>
 
             {/* Avatar */}
             <div ref={userRef} className={s.avatarWrapper}>
@@ -140,10 +154,7 @@ const Layout = () => {
             </NavLink>
 
             <button
-              onClick={() => {
-                logout();
-                navigate("/login");
-              }}
+              onClick={handleLogout}
               className={s.logoutButton}
             >
               <LogOut size={16} className="shrink-0" /> Log out
@@ -162,7 +173,7 @@ const Layout = () => {
         </aside>
       </div>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation with Logout */}
       <nav className={s.bottomNav}>
         {NAV.map(({ to, label, Icon }) => (
           <NavLink
@@ -176,6 +187,14 @@ const Layout = () => {
             <span>{label.split(" ")[0]}</span>
           </NavLink>
         ))}
+
+        <button
+          onClick={handleLogout}
+          className={`${s.bottomLinkBase} ${s.bottomLinkInactive} text-red-500`}
+        >
+          <LogOut size={20} />
+          <span>Logout</span>
+        </button>
       </nav>
     </div>
   );
