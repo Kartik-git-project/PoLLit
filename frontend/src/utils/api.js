@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // to create a single instance.
-const api = axios.create({ baseURL: "/api" });
+const api = axios.create({ 
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://pollit-11av.onrender.com/api" 
+});
 
 // to attach jwt token to any request
 api.interceptors.request.use((config) => {
