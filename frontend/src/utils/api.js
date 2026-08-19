@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-// to create a single instance.
+// Create a single instance with direct production backend URL
 const api = axios.create({ 
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://pollit-11av.onrender.com/api" 
+  baseURL: "https://pollit-11av.onrender.com/api" 
 });
 
-// to attach jwt token to any request
+// To attach jwt token to any request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
