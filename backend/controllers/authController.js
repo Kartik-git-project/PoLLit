@@ -27,6 +27,10 @@ export const register = async (req, res) => {
     const exists = await User.findOne({ $or: [{ email }, { username }] });
     console.log("3. User exists check complete:", !!exists);
 
+    if (exists) {
+      return res.status(400).json({ message: "Email or Username already exists" });
+    }
+
     let avatar = "";
     if (req.file) {
       console.log("4. Uploading to Cloudinary...");
@@ -44,8 +48,14 @@ export const register = async (req, res) => {
       avatar,
       otp,
       otpExpires: otpExpiry(),
+      isVerified: false,
     });
     console.log("7. User Created in DB!");
+
+    // 🎯 FIX: Triggering OTP Mail Execution Here
+    console.log("8. Triggering Nodemailer to send OTP to:", newUser.email);
+    await sendOtpEmail(newUser.email, otp, "Verify your PollIt account");
+    console.log("9. OTP Mail Process Completed!");
 
     return res.status(201).json({
       needsVerification: true,
