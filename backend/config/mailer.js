@@ -1,11 +1,14 @@
-import { TransactionalEmailsApi, SendSmtpEmail } from "@getbrevo/brevo";
+import Brevo from "@getbrevo/brevo";
 
 export const sendOtpEmail = async (to, otp, text) => {
   try {
-    const apiInstance = new TransactionalEmailsApi();
-    apiInstance.setApiKey(0, process.env.BREVO_API_KEY);
+    const apiInstance = new Brevo.TransactionalEmailsApi();
+    apiInstance.setApiKey(
+      Brevo.TransactionalEmailsApiApiKeys.apiKey,
+      process.env.BREVO_API_KEY
+    );
 
-    const sendSmtpEmail = new SendSmtpEmail();
+    const sendSmtpEmail = new Brevo.SendSmtpEmail();
     sendSmtpEmail.subject = text || "Verify your PollIt account";
     sendSmtpEmail.to = [{ email: to }];
     sendSmtpEmail.sender = { name: "PollIt", email: "noreply@pollit.com" };
