@@ -3,7 +3,8 @@ import { settingsStyles as s } from '../assets/dummyStyles'
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import Avatar, { Button, inputCls } from '../components/UIElements';
-import { Camera, Eye, EyeOff } from 'lucide-react';
+import { Camera, Eye, EyeOff, Trash2 } from 'lucide-react';
+import axios from 'axios';
 
 const Label = ({ children }) => <span className={s.label}>{children}</span>;
 
@@ -38,7 +39,7 @@ function PwField(props) {
 
 const SettingsPage = () => {
 
-      const { user, updateProfile, changePassword } = useAuth();
+  const { user, updateProfile, changePassword, logout } = useAuth();
   const toast = useToast();
   const [profile, setProfile] = useState({
     name: user?.name || "",
@@ -92,6 +93,36 @@ const SettingsPage = () => {
     },
     "Password updated!",
   );
+
+  // NEW: Delete Account Functionality
+  const handleDeleteAccount = async () => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete your account? This action is permanent and will remove all your polls and comments."
+    );
+
+    if (!confirmDelete) return;
+
+    setBusy("delete");
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL || 'https://pollit-11av.onrender.com'}/api/users/account`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast("Account deleted successfully!");
+      if (logout) logout();
+      else {
+        localStorage.clear();
+        window.location.href = "/login";
+      }
+    } catch (error) {
+      toast(error.response?.data?.message || "Failed to delete account", "error");
+    } finally {
+      setBusy("");
+    }
+  };
+
 return (
     <div className={s.container}>
       <h1 className={s.heading}>Settings</h1>
@@ -237,6 +268,27 @@ return (
             {busy === "password" ? "Updating..." : "Update password"}
           </Button>
         </form>
+      </Section>
+
+      {/* Danger Zone / Delete Account Section */}
+      <Section title="Danger Zone">
+        <div className="p-4 border border-red-500/20 bg-red-500/5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-red-500 font-semibold text-sm">Delete Account</h3>
+            <p className="text-xs text-gray-400 mt-1">
+              Once deleted, your profile, polls, and comments will be permanently removed.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={busy === "delete"}
+            onClick={handleDeleteAccount}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-medium bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Trash2 size={14} />
+            {busy === "delete" ? "Deleting..." : "Delete Account"}
+          </button>
+        </div>
       </Section>
     </div>
   );

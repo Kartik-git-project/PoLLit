@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Poll from "../models/Poll.js";
+import Comment from "../models/Comments.js"; // Added for cleanup
 import { shapePoll } from "../utils/pollShape.js";
 import { withCounts } from "../utils/counts.js";
 
@@ -102,6 +103,26 @@ export const getConnections = async (req, res) => {
         );
 
         res.json({ followers, following: user.following || [] });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// NEW: To delete user account and clean up associated polls & comments
+export const deleteAccount = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        // 1. Delete all polls created by this user
+        await Poll.deleteMany({ creator: userId });
+
+        // 2. Delete all comments created by this user
+        await Comment.deleteMany({ author: userId });
+
+        // 3. Remove user from database
+        await User.findByIdAndDelete(userId);
+
+        res.json({ message: "Account deleted successfully" });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
