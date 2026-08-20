@@ -17,7 +17,7 @@ export const sendOtpEmail = async (to, otp, text) => {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "PollIt", email: "noreply@pollit.com" },
+        sender: { name: "PollIt", email: "soni.karthik0301@gmail.com" },
         to: [{ email: to }],
         subject: text || "Verify your PollIt account",
         htmlContent: `
