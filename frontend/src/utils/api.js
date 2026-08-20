@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-// Create a single instance with direct production backend URL
+// Local testing ke liye local URL, production ke liye Render URL
+const API_URL = import.meta.env.MODE === 'development' 
+  ? "http://localhost:8000/api" 
+  : "https://pollit-11av.onrender.com/api";
+
 const api = axios.create({ 
-  baseURL: "https://pollit-11av.onrender.com/api" 
+  baseURL: API_URL 
 });
 
 // To attach jwt token to any request

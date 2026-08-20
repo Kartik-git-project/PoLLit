@@ -1,23 +1,35 @@
-import {v2 as cloudinary} from 'cloudinary';
-import multer from 'multer';
+import { v2 as cloudinary } from "cloudinary";
+import multer from "multer";
 
-// cloudinary keys
+// Cloudinary Configuration
 cloudinary.config({
-    cloud_name: process.env.CLOUDNIARY_CLOUD_NAME,
-    api_key: process.env.CLOUDNIARY_API_KEY,
-    api_secret: process.env.CLOUDNIARY_API_SECRET 
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// to upload an image or 4 images 
-export const upload = multer({storage: multer.memoryStorage()});
+// Multer Storage Setup in Memory
+const storage = multer.memoryStorage();
 
-// to upload image to cloudinary
-export const uploadToCloudinary = (buffer) =>
-    new Promise ((resolve, reject) =>{
-        const stream = cloudinary.uploader.upload_stream(
-            {folder: "polling-app"}, 
-            (err, result) => (err ? reject(err): resolve(result.secure_url))
-        );
-    });
-    
-export default cloudinary;
+// Multer Middleware with limits to prevent infinite stream hanging
+export const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
+
+// Helper Function for Cloudinary Buffer Upload
+export const uploadToCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    if (!fileBuffer) return resolve("");
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: "pollit_avatars" },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+
+    uploadStream.end(fileBuffer);
+  });
+};

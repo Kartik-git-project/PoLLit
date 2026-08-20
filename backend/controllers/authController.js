@@ -6,7 +6,6 @@ import { generateOtp, otpExpiry, otpValid } from "../utils/otp.js";
 import { sendOtpEmail } from "../config/mailer.js";
 import jwt from "jsonwebtoken";
 
-// FIXED: process.env.JWT_SECRET instead of process.env
 const makeToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
 const clean = (u) => ({
@@ -18,31 +17,26 @@ const clean = (u) => ({
   bio: u.bio,
 });
 
-// to register a user and send otp to that email
+// Register user and trigger OTP email
 export const register = async (req, res) => {
-  let newUser = null;
+  console.log("1. Register Request Received:", req.body);
   try {
     const { name, email, username, password } = req.body;
-    if (!name || !email || !username || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    console.log("2. Checking user existence...");
+
     const exists = await User.findOne({ $or: [{ email }, { username }] });
-    if (exists)
-      return res.status(400).json({
-        message: "Email or username already taken",
-      });
+    console.log("3. User exists check complete:", !!exists);
 
     let avatar = "";
     if (req.file) {
-      try {
-        avatar = await uploadToCloudinary(req.file.buffer);
-      } catch (e) {
-        console.warn("Avatar upload skipped: ", e.message);
-      }
+      console.log("4. Uploading to Cloudinary...");
+      avatar = await uploadToCloudinary(req.file.buffer);
+      console.log("5. Cloudinary Done:", avatar);
     }
 
     const otp = generateOtp();
-    newUser = await User.create({
+    console.log("6. Creating User in DB...");
+    const newUser = await User.create({
       name,
       email,
       username,
@@ -51,46 +45,28 @@ export const register = async (req, res) => {
       otp,
       otpExpires: otpExpiry(),
     });
+    console.log("7. User Created in DB!");
 
-    // Email sending with Rollback mechanism
-    try {
-      await sendOtpEmail(email, otp, "verify your PollIt account");
-    } catch (emailError) {
-      // Agar email bhejte waqt problem aati hai toh DB se unverified user ko delete kar do
-      if (newUser) {
-        await User.findByIdAndDelete(newUser._id);
-      }
-      console.error("Mailer Error:", emailError.message);
-      return res.status(500).json({
-        message: `Failed to send verification email: ${emailError.message}`,
-      });
-    }
-
-    res.status(201).json({
+    return res.status(201).json({
       needsVerification: true,
-      email,
+      email: newUser.email,
     });
   } catch (err) {
-    // Safety check for DB rollback
-    if (newUser) {
-      await User.findByIdAndDelete(newUser._id);
-    }
-    res.status(500).json({ message: err.message });
+    console.error("Register Error:", err.message);
+    return res.status(500).json({ message: err.message });
   }
 };
 
-// to verify otp
+// Verify OTP
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(404).json({
-        message: "User not found",
-      });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user.isVerified && !otpValid(user, otp))
+    if (!user.isVerified && !otpValid(user, otp)) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
 
     user.isVerified = true;
     user.otp = undefined;
@@ -106,7 +82,7 @@ export const verifyOtp = async (req, res) => {
   }
 };
 
-// to resend OTP
+// Resend OTP
 export const resendOtp = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
@@ -114,9 +90,11 @@ export const resendOtp = async (req, res) => {
 
     user.otp = generateOtp();
     user.otpExpires = otpExpiry();
-
     await user.save();
-    await sendOtpEmail(user.email, user.otp, "Verify your PollIt account");
+
+    sendOtpEmail(user.email, user.otp, "Verify your PollIt account").catch((e) =>
+      console.error("Resend Mailer Error:", e.message)
+    );
 
     res.json({ message: "OTP sent successfully!" });
   } catch (err) {
@@ -124,23 +102,23 @@ export const resendOtp = async (req, res) => {
   }
 };
 
-// login a user
+// Login user
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
 
-    if (!user || !(await user.matchPassword(password)))
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
 
-    if (!user.isVerified)
+    if (!user.isVerified) {
       return res.status(403).json({
         message: "Please verify your email first",
         needsVerification: true,
         email,
       });
+    }
 
     res.json({
       token: makeToken(user._id),
@@ -151,7 +129,7 @@ export const login = async (req, res) => {
   }
 };
 
-// to update your profile
+// Update profile
 export const updateProfile = async (req, res) => {
   try {
     const { name, username, bio } = req.body;
@@ -163,8 +141,10 @@ export const updateProfile = async (req, res) => {
       if (taken) return res.status(400).json({ message: "Username already taken" });
       user.username = username;
     }
+
     if (name) user.name = name;
     if (bio !== undefined) user.bio = bio;
+
     if (req.file) {
       try {
         user.avatar = await uploadToCloudinary(req.file.buffer);
@@ -172,6 +152,7 @@ export const updateProfile = async (req, res) => {
         console.warn("Avatar upload skipped:", e.message);
       }
     }
+
     await user.save();
     res.json({ user: clean(user) });
   } catch (err) {
@@ -179,37 +160,32 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// to change the password
+// Change password
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    if (!newPassword || newPassword.length < 8)
+    if (!newPassword || newPassword.length < 8) {
       return res.status(400).json({
         message: "New Password must be at least 8 characters",
       });
+    }
 
     const user = await User.findById(req.userId);
-    if (!user)
-      return res.status(400).json({
-        message: "User not found",
-      });
+    if (!user) return res.status(400).json({ message: "User not found" });
 
-    if (!(await user.matchPassword(currentPassword)))
-      return res.status(400).json({
-        message: "Current Password is incorrect!",
-      });
+    if (!(await user.matchPassword(currentPassword))) {
+      return res.status(400).json({ message: "Current Password is incorrect!" });
+    }
 
     user.password = newPassword;
     await user.save();
-    res.json({
-      message: "Password Updated!",
-    });
+    res.json({ message: "Password Updated!" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// to delete an account
+// Delete account
 export const deleteAccount = async (req, res) => {
   try {
     const id = req.userId;
@@ -217,7 +193,6 @@ export const deleteAccount = async (req, res) => {
     const pollIds = myPolls.map((p) => p._id);
 
     await Comments.deleteMany({ $or: [{ user: id }, { poll: { $in: pollIds } }] });
-
     await Poll.deleteMany({ creator: id });
     await Poll.updateMany({}, { $pull: { votes: { user: id } } });
     await User.findByIdAndDelete(id);
@@ -228,13 +203,12 @@ export const deleteAccount = async (req, res) => {
   }
 };
 
-// to get logged in user's profile
+// Get current user profile
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
     if (!user) return res.status(400).json({ message: "User not found" });
 
-    // FIXED: Query updated from "voted.user" to "votes.user"
     const [created, voted] = await Promise.all([
       Poll.countDocuments({ creator: user._id }),
       Poll.countDocuments({ "votes.user": user._id }),
@@ -253,7 +227,7 @@ export const getMe = async (req, res) => {
   }
 };
 
-// to send reset password otp
+// Forgot password OTP
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -265,14 +239,17 @@ export const forgotPassword = async (req, res) => {
     user.otpExpires = otpExpiry();
     await user.save();
 
-    await sendOtpEmail(email, otp, "reset your PollIt password");
+    sendOtpEmail(email, otp, "reset your PollIt password").catch((e) =>
+      console.error("Forgot Pass Mailer Error:", e.message)
+    );
+
     res.json({ message: "Password reset OTP sent to your email" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// to verify reset password otp
+// Verify reset OTP
 export const verifyResetOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -289,7 +266,7 @@ export const verifyResetOtp = async (req, res) => {
   }
 };
 
-// to reset password
+// Reset password
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, password } = req.body;

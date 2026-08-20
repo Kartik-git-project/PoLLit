@@ -1,24 +1,26 @@
 import nodemailer from "nodemailer";
 
 export const sendOtpEmail = async (to, otp, text) => {
-  // Transporter inside the function ensures .env is 100% loaded when sending
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, "") : "",
-    },
-  });
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, "") : "";
 
-  // Debug check in terminal
-  console.log("--> Sending OTP using account:", process.env.SMTP_USER);
-
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    throw new Error("SMTP_USER or SMTP_PASS is undefined in process.env");
+  if (!user || !pass) {
+    throw new Error("SMTP_USER or SMTP_PASS is missing in environment variables.");
   }
 
-  await transporter.sendMail({
-    from: `PollIt <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+  // Optimized Transporter configuration for Gmail Port 465
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: Number(process.env.SMTP_PORT) || 465,
+    secure: true, // true for 465
+    auth: { user, pass },
+    connectionTimeout: 10000, // 10s timeout to prevent infinite blocking
+  });
+
+  console.log("--> Attempting to send OTP email to:", to);
+
+  return await transporter.sendMail({
+    from: `PollIt <${process.env.EMAIL_FROM || user}>`,
     to,
     subject: text || "Verify your PollIt account",
     text: `Your OTP for PollIt is: ${otp}. This code is valid for 10 minutes.`,

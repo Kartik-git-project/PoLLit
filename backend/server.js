@@ -18,9 +18,16 @@ console.log("Environment Check:", {
 });
 
 // MIDDLEWARE
-app.use(cors({
-    origin: process.env.CLIENT_URL, credentials: true
-}));
+// CORS Configuration update karo
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173", 
+      "https://po-l-lit.vercel.app"
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // DB
