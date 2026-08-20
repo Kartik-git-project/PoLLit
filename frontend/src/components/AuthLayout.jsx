@@ -12,10 +12,19 @@ const AuthLayout = ({ title, subtitle, children }) => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("/api/polls/public-stats");
+        const baseUrl = import.meta.env.VITE_API_URL || "https://pollit-11av.onrender.com";
+        const response = await fetch(`${baseUrl}/api/counts`);
+        
         if (response.ok) {
-          const data = await response.json();
-          setStats(data);
+          const result = await response.json();
+          // Backend Response Handle Karna ({ success: true, data: { users, polls, votes } })
+          if (result.success && result.data) {
+            setStats({
+              users: result.data.users.toLocaleString(),
+              votes: result.data.votes.toLocaleString(),
+              polls: result.data.polls.toLocaleString(),
+            });
+          }
         }
       } catch (error) {
         console.error("Failed to load platform stats:", error);
