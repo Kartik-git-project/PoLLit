@@ -10,16 +10,11 @@ export const sendOtpEmail = async (to, otp, text) => {
       return;
     }
 
-    // Render & Cloud Deployment ke liye Port 587 (TLS) sabse reliable hota hai
+    // Gmail Service + Force IPv4 (Fixes Render ENETUNREACH error)
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false, // true for 465, false for 587
+      service: "gmail",
       auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false, // Local & Render SSL handshake issues prevent karne ke liye
-      },
-      connectionTimeout: 10000,
+      family: 4, // 🎯 FORCE IPv4 DNS Resolution
     });
 
     console.log("--> Attempting to send OTP email to:", to);
