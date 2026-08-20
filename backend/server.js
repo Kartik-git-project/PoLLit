@@ -9,36 +9,19 @@ import notificationRouter from './routes/notificationRoutes.js';
 import pollRouter from './routes/pollRoutes.js';
 import commentRouter from './routes/commentRoutes.js';
 import userRouter from './routes/userRoutes.js';
-import countRoutes from './routes/counts.js'; // Counts router added
+
+// MODELS FOR STATS
+import User from './models/User.js';
+import Poll from './models/Poll.js';
 
 const PORT = process.env.PORT || 8000;
 const app = express();
 
-console.log("Environment Check:", {
-  SMTP_USER: process.env.SMTP_USER ? "LOADED" : "MISSING",
-  SMTP_PASS: process.env.SMTP_PASS ? "LOADED" : "MISSING",
-  CLOUDINARY: process.env.CLOUDINARY_CLOUD_NAME ? "LOADED" : "MISSING",
-  BREVO_KEY: process.env.BREVO_API_KEY ? "LOADED" : "MISSING"
-});
-
 // BULLETPROOF CORS MIDDLEWARE
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://po-l-lit.vercel.app"
-];
-
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".vercel.app")) {
-        return callback(null, true);
-      } else {
-        return callback(null, true); // Fallback to avoid production blocking
-      }
+      return callback(null, true); // Allows Vercel frontend without CORS blocks
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -46,9 +29,7 @@ app.use(
   })
 );
 
-// Explicitly handle Preflight OPTIONS Requests
 app.options("*", cors());
-
 app.use(express.json());
 
 // DB CONNECTION
@@ -60,7 +41,28 @@ app.use('/api/polls', pollRouter);
 app.use('/api/comments', commentRouter);
 app.use('/api/users', userRouter);
 app.use('/api/notifications', notificationRouter);
-app.use('/api/counts', countRoutes); // Registered counts API
+
+// DIRECT INLINE COUNTS ROUTE (No extra file needed)
+app.get('/api/counts', async (req, res) => {
+  try {
+    const usersCount = await User.countDocuments();
+    const pollsCount = await Poll.countDocuments();
+
+    const votesData = await Poll.aggregate([
+      { $unwind: "$options" },
+      { $group: { _id: null, totalVotes: { $sum: "$options.votes" } } }
+    ]);
+
+    const totalVotes = votesData.length > 0 ? votesData[0].totalVotes : 0;
+
+    return res.status(200).json({
+      success: true,
+      data: { users: usersCount, polls: pollsCount, votes: totalVotes }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
 
 app.get('/', (req, res) => {
     res.send("API WORKING");
