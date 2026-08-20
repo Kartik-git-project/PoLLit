@@ -139,7 +139,7 @@ const LoginPage = () => {
 
       <div className={s.divider}>
         <div className={s.dividerLine}></div>
-        <span className={s.dividerText}>New to Pollify?</span>
+        <span className={s.dividerText}>New to PoLLit?</span>
         <div className={s.dividerLine}></div>
       </div>
 
