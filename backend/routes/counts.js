@@ -11,16 +11,24 @@ router.get("/", async (req, res) => {
     
     const pollsCount = pollsList.length;
 
-    // Har poll ke sabhi options se total votes Calculate karo
     let totalVotes = 0;
     pollsList.forEach(poll => {
+      // Direct poll.voters / poll.votes array check
+      if (Array.isArray(poll.voters)) {
+        totalVotes += poll.voters.length;
+      } else if (typeof poll.totalVotes === 'number') {
+        totalVotes += poll.totalVotes;
+      }
+
+      // Options array check
       if (poll.options && Array.isArray(poll.options)) {
         poll.options.forEach(option => {
-          // Check karo votes field Number hai ya voters Array
           if (typeof option.votes === 'number') {
             totalVotes += option.votes;
           } else if (Array.isArray(option.voters)) {
             totalVotes += option.voters.length;
+          } else if (Array.isArray(option.votes)) {
+            totalVotes += option.votes.length;
           }
         });
       }
