@@ -11,26 +11,11 @@ router.get("/", async (req, res) => {
     
     const pollsCount = pollsList.length;
 
+    // Har poll ke top-level votes array ki length count karna
     let totalVotes = 0;
     pollsList.forEach(poll => {
-      // Direct poll.voters / poll.votes array check
-      if (Array.isArray(poll.voters)) {
-        totalVotes += poll.voters.length;
-      } else if (typeof poll.totalVotes === 'number') {
-        totalVotes += poll.totalVotes;
-      }
-
-      // Options array check
-      if (poll.options && Array.isArray(poll.options)) {
-        poll.options.forEach(option => {
-          if (typeof option.votes === 'number') {
-            totalVotes += option.votes;
-          } else if (Array.isArray(option.voters)) {
-            totalVotes += option.voters.length;
-          } else if (Array.isArray(option.votes)) {
-            totalVotes += option.votes.length;
-          }
-        });
+      if (poll.votes && Array.isArray(poll.votes)) {
+        totalVotes += poll.votes.length;
       }
     });
 
