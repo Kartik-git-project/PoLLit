@@ -7,14 +7,24 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   try {
     const usersCount = await User.countDocuments();
-    const pollsCount = await Poll.countDocuments();
+    const pollsList = await Poll.find({});
+    
+    const pollsCount = pollsList.length;
 
-    const votesData = await Poll.aggregate([
-      { $unwind: "$options" },
-      { $group: { _id: null, totalVotes: { $sum: "$options.votes" } } }
-    ]);
-
-    const totalVotes = votesData.length > 0 ? votesData[0].totalVotes : 0;
+    // Har poll ke sabhi options se total votes Calculate karo
+    let totalVotes = 0;
+    pollsList.forEach(poll => {
+      if (poll.options && Array.isArray(poll.options)) {
+        poll.options.forEach(option => {
+          // Check karo votes field Number hai ya voters Array
+          if (typeof option.votes === 'number') {
+            totalVotes += option.votes;
+          } else if (Array.isArray(option.voters)) {
+            totalVotes += option.voters.length;
+          }
+        });
+      }
+    });
 
     return res.status(200).json({
       success: true,
